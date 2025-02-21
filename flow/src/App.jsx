@@ -1,34 +1,54 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useReducer } from 'react'
+
+const WORK_DURATION = 25 * 60;
+const BREAK_DURATION = 5 * 60;
+
+const initialState = {
+  timeLeft: WORK_DURATION,
+  isRunning: false,
+  isBreak: false,
+}
+
+const reducer = (state, action) => {
+  switch(action.type) {
+    case 'tick':
+      return {
+        ...state,
+        timeLeft: state.timeLeft <= 1 ? 
+          (state.isBreak ? WORK_DURATION : BREAK_DURATION) : state.timeLeft - 1
+      }
+    case 'toggle_running':
+      return {
+        ...state,
+        isRunning: !state.isRunning
+      }
+    case 'reset':
+      return initialState;
+    case 'toggle_break':
+      return {
+        ...state,
+        isBreak: !state.isBreak
+      }
+    default:
+      return state;
+  }
+}
 
 const App = () => {
-  const workDuration = 25 * 60;
-  const breakDuration = 5 * 60;
-
-  const [timeLeft, setTimeLeft] = useState(workDuration);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isBreak, setIsBreak] = useState(false);
+  const [{ timeLeft, isRunning, isBreak }, dispatch] = useReducer(reducer, initialState);
 
   useEffect(() => {
+    if (!isRunning) return;
+  
     const interval = setInterval(() => {
-      setTimeLeft((prevTime) => {
-        if (prevTime <= 1) {
-          clearInterval(interval);
-          setIsBreak(!isBreak);
-          setTimeLeft(isBreak ? workDuration : breakDuration);
-          return isBreak ? workDuration : breakDuration;
-        }
-        return prevTime - 1;
-      })
+      dispatch({ type: 'tick' });
     }, 1000);
+  
     return () => clearInterval(interval);
-  }, [isRunning, isBreak, workDuration, breakDuration]);
+  }, [isRunning, isBreak]);
 
-  const toggleTimer = () => setIsRunning(!isRunning);
-  const resetTimer = () => {
-    setIsRunning(false);
-    setIsBreak(false);
-    setTimeLeft(workDuration);
-  };
+  const toggleTimer = () => dispatch({ type: 'toggle_running' });
+  const resetTimer = () => dispatch({ type: 'reset' });
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
